@@ -6,5 +6,5 @@ const voteSchema = new Schema({
     choices: [String]
 });
 
-const Vote = model('vote', pollSchema);
+const Vote = model('vote', voteSchema);
 export default Vote;

@@ -42,6 +42,20 @@ app.post('/create', async (req, res) => {
     res.status(200).send(poll._id);
 });
 
+app.get('/poll', async (req, res) => {
+    const pollId = req.body.pollId;
+
+    const poll = await Poll.findById(pollId).exec();
+
+    if (!poll) {
+        const response = `Poll ${pollId} does not exist.`;
+        console.log(response);
+        return res.status(401).send(response);
+    }
+
+    res.status(200).send(poll.choices);
+});
+
 const validVoteReq = async (pollId, votes) => {
     // get poll
     const poll = await Poll.findById(pollId).exec();
