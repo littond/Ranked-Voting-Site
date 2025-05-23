@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import mongoose from 'mongoose';
 import Poll from './model/Poll.js';
 import { env } from '../environment.js';
@@ -14,6 +15,7 @@ const PORT = 3000;
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 app.get('/', (req, res) => {
     res.send('Hello');
@@ -33,7 +35,7 @@ app.post('/create', async (req, res) => {
 
     const poll = await Poll.create({
         _id: choices.join(""),
-        choices: ["kamala", "trump"]
+        choices
     });
 
     res.status(200).send(poll._id);
