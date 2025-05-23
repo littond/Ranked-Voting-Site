@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import Poll from './model/Poll.js';
+import Vote from './model/Vote.js';
 import { env } from '../environment.js';
 
 if (!env || !env.uri) {
@@ -39,6 +40,39 @@ app.post('/create', async (req, res) => {
     });
 
     res.status(200).send(poll._id);
+});
+
+const validVoteReq = async (pollId, votes) => {
+    // get poll
+    const poll = await Poll.findById(pollId).exec();
+
+    if (!poll) {
+        console.log(`Poll ${pollId} does not exist.`);
+        return false;
+    }
+
+    // check poll choices.length === votes.lenth
+    return poll.choices.length === votes.length;
+}
+
+app.post('/Vote', async (req, res) => {
+    const pollId = req.body.pollId;
+    const votes = req.body.votes;
+    console.log(`Voting for ${pollId} poll`);
+    console.log("Votes: ", votes);
+
+    if (await validVoteReq(pollId, votes)) {
+        const response = "This was an invalid vote.";
+        console.log(response);
+        return res.status(401).send(response);
+    }
+
+    const vote = await Vote.create({
+        pollId,
+        votes
+    });
+
+    res.status(200).send(vote._id);
 });
 
 // connect to mongoos then start the server;
