@@ -109,6 +109,93 @@ app.post('/vote', async (req, res) => {
     res.status(200).send(vote._id);
 });
 
+const validVotesReq = async (pollId) => {
+    const poll = await Poll.findById(pollId).exec();
+    if (!poll) {
+        console.log(`Poll ${pollId} does not exist.`);
+        return false;
+    }
+    return true;
+}
+
+const determineChoice = (vote, eliminated) => {
+    for (let i = 0; i < vote.length; i++) {
+        if (!eliminated.includes(vote[i])) {
+            return vote[i];
+        }
+    }
+}
+
+const isWinner = (voteCounts, totalVotes) => {
+    console.log("finding winner", Object.keys(voteCounts).length);
+    for (const [choice, count] of Object.entries(voteCounts)) {
+        console.log(`Choice, ${choice}: ${count} is greater than ${totalVotes / 2}? ${count > totalVotes / 2}`);
+        if (count > totalVotes / 2) {
+            console.log("winner found: ", choice);
+            return choice;
+        }
+    }
+    console.log("no winner found");
+    return false;
+}
+
+const determineEliminated = (voteCounts) => {
+  let minKey;
+  let minValue;
+  for (const [key, value] of Object.entries(voteCounts)) {
+    // First entry or found a new lower value?
+    if (minValue === undefined || value < minValue) {
+      minValue = value;
+      minKey = key;
+    }
+  }
+  return minKey;
+}
+
+const countVotes = (votes, rounds) => {
+    console.log("Votes received: ", votes);
+    let winner = false;
+    let eliminated = [];
+    // run for x rounds
+    for (let i = 0; i < rounds; i++) {
+        console.log("Round: ", i);
+        let voteCounts = {};
+        // loop over votes
+        for (let j = 0; j < votes.length; j++) {
+            // determing choice from voter
+            const choice = determineChoice(votes[j], eliminated);
+            // add choice to voteCounts
+            console.log("vote for: ", choice);
+            voteCounts[choice] = (voteCounts[choice] || 0) + 1;
+        }
+        // is there a winner?
+        winner = isWinner(voteCounts, votes.length);
+        if (!winner) {
+            // no, determine eliminated and continue
+            eliminated.push(determineEliminated(voteCounts));
+        }
+    }
+    return winner
+}
+
+app.get('/votes', async (req, res) => {
+    const pollId = req.query.pollId;
+    console.log("Poll ID: ", pollId);
+
+    if (!await validVotesReq(pollId)) {
+        const response = "This was an invalid request.";
+        console.log(response);
+        return res.status(401).send(response);
+    }
+
+    const votes = await Vote.find({ pollId }).exec();
+    const cleanedVotes = votes.map(vote => vote.choices);
+
+    const winner = countVotes(cleanedVotes, votes[0].choices.length);
+
+    res.status(200).send(winner)
+});
+
 // connect to mongoos then start the server;
 try {
     mongoose.connect(env.uri);
@@ -117,19 +204,3 @@ try {
     process.exit();
 }
 app.listen(PORT, () => console.log(`Proxy server running on port ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
