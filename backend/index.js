@@ -43,7 +43,8 @@ app.post('/create', async (req, res) => {
 });
 
 app.get('/poll', async (req, res) => {
-    const pollId = req.body.pollId;
+    const pollId = req.query.pollId;
+    console.log("Poll ID: ", pollId);
 
     const poll = await Poll.findById(pollId).exec();
 
@@ -57,6 +58,7 @@ app.get('/poll', async (req, res) => {
 });
 
 const validVoteReq = async (pollId, votes) => {
+    console.log("Validating vote request for poll: ", pollId);
     // get poll
     const poll = await Poll.findById(pollId).exec();
 
@@ -66,16 +68,32 @@ const validVoteReq = async (pollId, votes) => {
     }
 
     // check poll choices.length === votes.lenth
-    return poll.choices.length === votes.length;
+    console.log("Poll: ", poll.choices.length);
+    console.log("Votes: ", votes.length);
+    if (!poll.choices.length === votes.length) {
+        console.log("Poll had incorrect number of choices.");
+        return false;
+    }
+
+    for (let i = 0; i < poll.choices.length; i++) {
+        if (!votes.includes(poll.choices[i])) {
+            console.log("Poll choice: ", poll.choices[i]);
+            console.log("Votes: ", votes);
+            console.log("Poll had incorrect choice.");
+            return false;
+        }
+    }
+
+    return true;
 }
 
-app.post('/Vote', async (req, res) => {
+app.post('/vote', async (req, res) => {
     const pollId = req.body.pollId;
     const votes = req.body.votes;
     console.log(`Voting for ${pollId} poll`);
     console.log("Votes: ", votes);
 
-    if (await validVoteReq(pollId, votes)) {
+    if (!await validVoteReq(pollId, votes)) {
         const response = "This was an invalid vote.";
         console.log(response);
         return res.status(401).send(response);
@@ -83,8 +101,10 @@ app.post('/Vote', async (req, res) => {
 
     const vote = await Vote.create({
         pollId,
-        votes
+        choices: votes
     });
+
+    console.log("Vote: ", vote);
 
     res.status(200).send(vote._id);
 });
